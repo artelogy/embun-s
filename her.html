@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terminal of the Heart</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #0d0d0d;
+      color: #00ff9d;
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .terminal {
+      width: 90%;
+      max-width: 800px;
+      background-color: #000;
+      border: 1px solid #00ff9d33;
+      padding: 20px;
+      box-shadow: 0 0 20px #00ff9d44;
+      overflow: auto;
+      height: 80vh;
+      transition: opacity 1.2s ease;
+    }
+    .fade-out { opacity: 0; pointer-events: none; }
+    .line { margin: 5px 0; }
+    .prompt { display: flex; }
+    .input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #00ff9d;
+      font-family: inherit;
+      font-size: inherit;
+      width: 100%;
+    }
+    .blink { animation: blink 1s step-end infinite; }
+    @keyframes blink {
+      from, to { border-right: 2px solid transparent; }
+      50% { border-right: 2px solid #00ff9d; }
+    }
+    .surprise {
+      color: #ffb6f0;
+      background: #111111;
+      border-left: 4px solid #ffb6f0;
+      padding-left: 1em;
+      margin-top: 1em;
+      animation: fadeIn 2s ease;
+    }
+    .question { margin-top: 1em; padding: 1em; background-color: #1a1a1a; border-left: 4px solid #00ff9d; color: #00ff9d; }
+    .question button {
+      background-color: #00ff9d;
+      color: #000;
+      border: none;
+      padding: 0.5em 1.2em;
+      margin: 0.5em;
+      cursor: pointer;
+      font-family: inherit;
+      transition: transform 0.2s;
+    }
+    .question button:hover { transform: scale(1.05); }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    #final-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.9);
+      color: #ffb6f0;
+      font-size: 1.3rem;
+      text-align: center;
+      padding: 0 1.2rem;
+      opacity: 0;
+      transition: opacity 1s ease;
+      pointer-events: none;
+    }
+    #final-overlay.active { opacity: 1; pointer-events: all; }
+  </style>
+</head>
+<body>
+  <div class="terminal" id="terminal">
+    <div class="line" id="boot"></div>
+    <div class="prompt" style="display:none;"><span>&gt; </span><input type="text" class="input blink" id="cli" autofocus></div>
+  </div>
+  <!-- overlay for final answer -->
+  <div id="final-overlay"></div>
+
+  <script>
+    const terminal = document.getElementById("terminal");
+    const inputContainer = document.querySelector(".prompt");
+    const input = document.getElementById("cli");
+    const boot = document.getElementById("boot");
+    const overlay = document.getElementById("final-overlay");
+
+    let unlocked = false;
+    let confessed = false;
+    let waitingPassword = false;
+
+    const password = "my stupid alien";
+
+    const commands = {
+      help: [
+        "Available commands:",
+        "  about     — who you are to me",
+        "  memory    — a fragment I remember",
+        "  why       — why this even matters",
+        "  unlock    — try if you dare...",
+        "  confess   — only works after 'unlock'",
+        "  hint      — need a tiny nudge?"
+      ],
+      about: ["You're a quiet presence. Like dew. Not always noticed, but missed when gone."],
+      memory: ["First met and texted you on that random Friday. You were just... light, comforting."],
+      why: ["Because even when I pretend not to look, I do."],
+      hint: ["It’s something only I'd call you.","Not an insult. More like a nickname.","One part silly. One part... extraterrestrial.", "Let's see if you'll get it or not."],
+      unlock() { waitingPassword = true; return ["🔐 Enter password:"]; },
+      confess() {
+        if (!unlocked) return ["Access denied. Try 'unlock' first."];
+        if (!confessed) {
+          confessed = true;
+          showSurprise();
+          return ["...This isn’t just a simulation.","I like you, Embun. Quietly. Maybe too much."];
+        }
+        return ["Already confessed."];
+      }
+    };
+
+    function print(lines) {
+      (Array.isArray(lines) ? lines : [lines]).forEach(l => {
+        const div = document.createElement("div");
+        div.className = "line";
+        div.textContent = l;
+        terminal.insertBefore(div, inputContainer);
+      });
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function endSequence(yes) {
+      terminal.classList.add('fade-out');
+      overlay.textContent = yes ? "𖹭 Welcome aboard, co‑pilot of this silly heart." : "🌧️ Still, thank you for letting me dream a little.";
+      setTimeout(()=>overlay.classList.add('active'), 600);
+    }
+
+    function showSurprise() {
+      const surprise = document.createElement("div");
+      surprise.className = "surprise";
+      surprise.innerHTML = `
+        <strong>💌 Surprise unlocked.</strong><br>
+        Embun, if you’re reading this... thank you for existing. This page might be fake, but my feelings aren’t.<br><br>
+        <div class="question">
+          Would you like to be mine?<br>
+          <button onclick="endSequence(true)">Yes</button>
+          <button onclick="endSequence(false)">No</button>
+        </div>`;
+      terminal.appendChild(surprise);
+    }
+
+    function handleInput(value) {
+      const userLine = document.createElement("div");
+      userLine.className = "line";
+      userLine.textContent = "> " + value;
+      terminal.insertBefore(userLine, inputContainer);
+
+      if (waitingPassword) {
+        if (value.toLowerCase() === password) { unlocked = true; print("[Access granted]"); } else { print("Incorrect password."); }
+        waitingPassword = false; return;
+      }
+
+      if (commands[value]) {
+        const out = typeof commands[value] === 'function' ? commands[value]() : commands[value];
+        print(out);
+      } else {
+        print("Unknown command. Try 'help', sayang.");
+      }
+    }
+
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { handleInput(input.value.trim()); input.value=''; } });
+
+    function bootSequence(arr, d=500){let i=0;const n=()=>{if(i<arr.length){boot.innerHTML+=arr[i++]+"<br>";setTimeout(n,d);}else{boot.remove();inputContainer.style.display='flex';print('Login as: embun the alien');print('Welcome back, Embun.');print("Type 'help' to begin.");}};n();}
+
+    bootSequence(["[Booting emotional interface...]",["[Loading memory module]"],["[Decrypting thoughts]"],["[Establishing connection with embun]"]]);
+  </script>
+</body>
+</html>
